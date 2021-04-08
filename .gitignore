@@ -3,6 +3,14 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# Idea
+.idea
+
+# Any test audio files files
+public/*.mp3
+public/*.wav
+public/*.flac
+
 # C extensions
 *.so
 
