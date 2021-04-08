@@ -1,0 +1,27 @@
+button {
+    padding: 8px 16px;
+}
+
+pre {
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
+video {
+    width: 100%;
+}
+
+.option {
+    margin-bottom: 8px;
+}
+
+#controller {
+    display: flex;
+    justify-content: center;
+    flex-direction: column;
+    align-items:center;
+}
+
+#media {
+    max-width: 1280px;
+}

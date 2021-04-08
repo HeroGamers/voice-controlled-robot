@@ -1,3 +1,4 @@
 gpiozero==1.5.1
 websockets==8.1
 asyncio==3.4.3
+pymitter=0.3.0

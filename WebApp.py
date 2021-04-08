@@ -18,6 +18,11 @@ async def javascript(request):
     return web.Response(content_type="application/javascript", text=content)
 
 
+async def css(request):
+    content = open(os.path.join(ROOT, "public/stylesheet.css"), "r").read()
+    return web.Response(content_type="text/css", text=content)
+
+
 async def offer(request):
     webrtc_offer = await WebRTCManager.offer(request)
 
@@ -47,6 +52,7 @@ def start_app(args):
     app.on_shutdown.append(on_shutdown)
     app.router.add_get("/", index)
     app.router.add_get("/client.js", javascript)
+    app.router.add_get("/stylesheet.css", css)
     app.router.add_post("/offer", offer)
     web.run_app(
         app, access_log=None, host=args.host, port=args.port, ssl_context=ssl_context

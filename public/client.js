@@ -5,6 +5,28 @@ var dataChannelLog = document.getElementById('data-channel'),
     signalingLog = document.getElementById('signaling-state'),
     commandInput = document.getElementById('command-input');
 
+// Cookie func from w3schools
+function getCookie(cname) {
+    var name = cname + "=";
+    var ca = document.cookie.split(';');
+    for(var i = 0; i < ca.length; i++) {
+        var c = ca[i];
+        while (c.charAt(0) === ' ') {
+            c = c.substring(1);
+        }
+        if (c.indexOf(name) === 0) {
+            return c.substring(name.length, c.length);
+        }
+    }
+    return "";
+}
+
+// Check debug
+var debug = getCookie("debug")
+if (debug && debug === "true") {
+    document.getElementById('debug').style.display = 'block';
+}
+
 // peer connection
 var pc = null;
 
@@ -166,22 +188,7 @@ function start() {
         }
     }
 
-    if (constraints.audio || constraints.video) {
-        if (constraints.video) {
-            document.getElementById('media').style.display = 'block';
-        }
-        // navigator.mediaDevices.getUserMedia(constraints).then(function(stream) {
-        //     stream.getTracks().forEach(function(track) {
-        //         pc.addTrack(track, stream);
-        //     });
-        //     return negotiate();
-        // }, function(err) {
-        //     alert('Could not acquire media: ' + err);
-        // });
-        return negotiate();
-    } else {
-        negotiate();
-    }
+    negotiate()
 
     document.getElementById('stop').style.display = 'inline-block';
 }
@@ -294,5 +301,6 @@ function submitCommand() {
         return
     }
 
+    dataChannelLog.textContent += '> command: ' + command + '\n';
     dc.send("command: " + command)
 }
