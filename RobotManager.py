@@ -25,13 +25,14 @@ class Robot:
     def turn_left(self):
         print("bbbbbb")
 
+
 class MotorFactory:
     def __init__(self, type: str, *args):
         # Define pins
         self.motor = None
-        if type is "DCMotor":
+        if type == "DCMotor":
             self.motor = Motor(*args)
-        elif type is "ServoMotor":
+        elif type == "ServoMotor":
             self.motor = Servo(*args)
 
         # Append motor to motors

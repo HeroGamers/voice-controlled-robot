@@ -191,6 +191,7 @@ function start() {
     negotiate()
 
     document.getElementById('stop').style.display = 'inline-block';
+    document.getElementsByClassName('command_input')[0].style.display = 'block'
 }
 
 function stop() {
@@ -212,13 +213,17 @@ function stop() {
 
     // close local audio / video
     pc.getSenders().forEach(function(sender) {
-        sender.track.stop();
+        if (sender.track) {
+            sender.track.stop();
+        }
     });
 
     // close peer connection
     setTimeout(function() {
         pc.close();
     }, 500);
+
+    document.getElementsByClassName('command_input')[0].style.display = 'none'
 }
 
 function sdpFilterCodec(kind, codec, realSdp) {

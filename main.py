@@ -3,7 +3,7 @@ import platform
 import RobotManager
 import WebApp
 
-debug = True
+debug = False
 
 robot = None
 if platform.system() == "Linux":

@@ -10,7 +10,7 @@ import platform
 
 from aiortc import RTCPeerConnection, RTCSessionDescription
 from aiortc.contrib.media import MediaPlayer, MediaRelay
-from pyee import EventEmitter
+from pymitter import EventEmitter
 
 ROOT = os.path.dirname(__file__)
 
