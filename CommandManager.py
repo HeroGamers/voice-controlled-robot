@@ -2,7 +2,6 @@ import logging as command_logging
 import os
 import sys
 from logging.handlers import TimedRotatingFileHandler
-
 from RobotManager import Robot
 
 logger = command_logging.getLogger("commands")
@@ -34,7 +33,11 @@ class Command:
         self.debug_words = {"commandWord": commandDict["word"], "distanceWord": commandDict["distance_word"], "numberWord": commandDict["number_word"]}
 
     def run(self, robot: Robot):
-        # TODO: Kode til gpio her
+        # GPIO kode:
+        if self.command == 100:
+            robot.forward(self.number*self.distance)
+        elif self.command == -1:
+            robot.backward(self.number*self.distance)
         print(self, robot)
 
 
@@ -65,8 +68,8 @@ class CommandParser:
                             "tilbage": -1, "baglæns": -1, "bagud": -1,
                             "højre": 2,
                             "venstre": 3}
-        distance_keywords = {"millimeter": 1, "centimeter": 1,
-                             "meter": 100}
+        distance_keywords = {"millimeter": 0.001, "centimeter": 0.01,
+                             "meter": 1}
         number_keywords = {"en": 1, "1": 1,
                            "to": 2, "2": 2,
                            "tre": 3, "3": 3}
@@ -138,10 +141,3 @@ class CommandParser:
                 text_list.pop(i)
             i += 1
 
-
-def drive():
-    distance = 2
-
-
-def stop():
-    pee = 2
