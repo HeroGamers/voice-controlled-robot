@@ -1,5 +1,6 @@
 import platform
 
+import CommandManager
 import RobotManager
 import WebApp
 
@@ -18,6 +19,17 @@ RTCMessage = WebApp.WebRTCManager.RTCMessage
 @RTCMessage.on("command")
 def onCommand(command):
     print("Main received command: " + command)
+    # Parse commands
+    commands = CommandManager.CommandParser(command).commands
+
+    if robot:
+        # If first command is stop, then empty queue and stop robot
+        if commands[0].command == 0:
+            robot.queue.empty()
+            commands[0].run(robot)
+        else:
+            # add commands to queue
+            robot.queue.addToQueue(commands)
 
 
 @RTCMessage.on("message")

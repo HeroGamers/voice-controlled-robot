@@ -1,5 +1,6 @@
 from gpiozero import DigitalOutputDevice, Motor, Servo, CompositeDevice
 from time import sleep
+import CommandManager
 
 # Unchangeable variables
 
@@ -13,6 +14,9 @@ class Robot:
         self.rightDC = DCMotor(*rightDC_args)
 
         self.frontServo = Servo(*servo_args)
+
+        # Make new command queue for robot
+        self.queue = CommandManager.CommandQueue()
 
     def forward(self, centimeters):
         # TODO maybe these functions should be async

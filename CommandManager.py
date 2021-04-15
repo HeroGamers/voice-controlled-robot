@@ -3,6 +3,8 @@ import os
 import sys
 from logging.handlers import TimedRotatingFileHandler
 
+from RobotManager import Robot
+
 logger = command_logging.getLogger("commands")
 
 
@@ -25,6 +27,29 @@ setup_logger()
 
 
 class Command:
+    def __init__(self, commandDict: dict):
+        self.command = commandDict["command"]
+        self.distance = commandDict["distance"]
+        self.number = commandDict["number"]
+        self.debug_words = {"commandWord": commandDict["word"], "distanceWord": commandDict["distance_word"], "numberWord": commandDict["number_word"]}
+
+    def run(self, robot: Robot):
+        # TODO: Kode til gpio her
+        print(self, robot)
+
+
+class CommandQueue:
+    def __init__(self):
+        self.queue = []
+
+    def addToQueue(self, commandList: list):
+        self.queue = self.queue + commandList
+
+    def empty(self):
+        self.queue = []
+
+
+class CommandParser:
     def __init__(self, text: str):
         self.raw_text = text
         self.commands = []
@@ -59,7 +84,7 @@ class Command:
                 logger.debug(text_list)
                 logger.debug("Current i: " + str(i) + " - " + str(current_word))
                 if command_keywords[current_word] == 0 or command_keywords[current_word] == 100:
-                    self.commands.append({"command": command_keywords[current_word], "word": current_word})
+                    self.commands.append(Command({"command": command_keywords[current_word], "word": current_word}))
                     text_list.pop(i)
                     # do not increment i
                     continue
@@ -109,7 +134,7 @@ class Command:
                         command["number"] = number_keywords[search_word]
                         command["number_word"] = search_word
 
-                self.commands.append(command)
+                self.commands.append(Command(command))
                 text_list.pop(i)
             i += 1
 
