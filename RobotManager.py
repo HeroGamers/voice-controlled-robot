@@ -23,6 +23,11 @@ class Robot:
         self.leftDC.forward(centimeters)
         self.rightDC.forward(centimeters)
 
+    def backward(self, centimeters):
+        # TODO maybe these functions should be async
+        self.leftDC.backward(centimeters)
+        self.rightDC.backward(centimeters)
+
     def turn_right(self):
         print("aaaaaa")
 
@@ -53,6 +58,9 @@ class DCMotor(MotorFactory):
         # TODO some function to check distance with encoder
         # maybe this function should be async - since when we have to wait for encoder to give distance,
         # everything else will be stopped while we wait for the motor to reach the set distance
+
+    def backward(self, distance):
+        self.motor.backward(distance)
 
     def off(self):
         self.motor.stop()
