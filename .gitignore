@@ -10,6 +10,7 @@ __pycache__/
 public/*.mp3
 public/*.wav
 public/*.flac
+temp_media/
 
 # Logs
 logs/

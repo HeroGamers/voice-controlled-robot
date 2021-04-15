@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 import os
+import queue
 import random
 import re
 import subprocess
@@ -9,7 +10,8 @@ import uuid
 import platform
 
 from aiortc import RTCPeerConnection, RTCSessionDescription
-from aiortc.contrib.media import MediaPlayer, MediaRelay
+from aiortc.contrib.media import MediaPlayer, MediaRelay, MediaRecorder
+from aiortc.mediastreams import MediaStreamError, MediaStreamTrack
 from pymitter import EventEmitter
 
 ROOT = os.path.dirname(__file__)
@@ -23,13 +25,14 @@ RTCMessage = EventEmitter()
 
 audio = None
 video = None
+client_audio = MediaStreamTrack()
 
 
 def init(log_level):
     logging.basicConfig(level=log_level)
 
 
-def getLocalMedia():
+def getLocalMedia(params):
     def get_device_list_dshow():
         """
         Code to get get device name list under windows directshow from ffmpeg
@@ -50,7 +53,7 @@ def getLocalMedia():
     video = None
 
     camera_num = 0
-    options = {"framerate": "30", "video_size": "640x480", "rtbufsize": "1024M"}
+    options = {"framerate": params["video_fps"], "video_size": params["video_res"], "rtbufsize": params["video_buffer"]}
 
     if platform.system() == "Darwin":
         video = MediaPlayer(
@@ -58,6 +61,7 @@ def getLocalMedia():
         )
     elif platform.system() == "Windows":
         dev_names = get_device_list_dshow()
+        print("Cameras: ", dev_names)
         video = MediaPlayer("video={}".format(dev_names[camera_num]), format='dshow', options=options)
     else:
         video = MediaPlayer('/dev/video{}'.format(camera_num), format="v4l2", options=options)
@@ -74,18 +78,18 @@ def getLocalMedia():
     return audio, relay.subscribe(video.video)
 
 
-def addMediaTracks(pc):
+def addMediaTracks(pc, params):
     global audio, video, players
 
     if not players:
-        audio, video = getLocalMedia()
+        audio, video = getLocalMedia(params)
 
     for t in pc.getTransceivers():
         if t.kind == "audio" and audio:
-            logger.info(msg="audio")
+            logger.info(msg="adding audio")
             pc.addTrack(relay.subscribe(audio.audio))
         elif t.kind == "video" and video:
-            logger.info(msg="video")
+            logger.info(msg="adding video")
             pc.addTrack(video)
 
 
@@ -102,6 +106,8 @@ async def offer(request):
         logger.info(pc_id + " " + msg, *args)
 
     log_info("Created for %s", request.remote)
+
+    recorder = MediaRecorder("./temp_media/temp_audio.wav")
 
     @pc.on("datachannel")
     def on_datachannel(channel):
@@ -153,6 +159,10 @@ async def offer(request):
     def on_track(track):
         log_info("Track %s received", track.kind)
 
+        if track.kind == "audio":
+            global client_audio
+            client_audio = track
+
         @track.on("ended")
         async def on_ended():
             log_info("Track %s ended", track.kind)
@@ -160,8 +170,21 @@ async def offer(request):
     # handle offer
     await pc.setRemoteDescription(offer)
 
+    async def sendAudio(track):
+        log_info("Running audio track frames...")
+        buffer = queue.Queue()
+
+        while True:
+            try:
+                frame = await track.recv()
+            except MediaStreamError:
+                return
+            buffer.put(frame)
+
+    await sendAudio(client_audio)
+
     # prepare local media
-    addMediaTracks(pc)
+    addMediaTracks(pc, params)
 
     # send answer
     answer = await pc.createAnswer()

@@ -48,22 +48,24 @@
         <input id="use-video" checked="checked" type="checkbox"/>
         <label for="use-video">Use video</label>
         <select id="video-resolution">
-            <option value="" selected>Default resolution</option>
+            <option value="640x480" selected>Default resolution</option>
             <option value="320x240">320x240</option>
             <option value="640x480">640x480</option>
             <option value="960x540">960x540</option>
             <option value="1280x720">1280x720</option>
+            <option value="1920x1080">1920x1080</option>
         </select>
-        <select id="video-transform">
-            <option value="none" selected>No transform</option>
-            <option value="edges">Edge detection</option>
-            <option value="cartoon">Cartoon effect</option>
-            <option value="rotate">Rotate</option>
+        <select id="video-buffer">
+            <option value="1024M" selected>Default buffer size</option>
+            <option value="1024M">1 GB</option>
+            <option value="2048M">2 GB</option>
+            <option value="4096M">4 GB</option>
         </select>
-        <select id="video-codec">
-            <option value="default" selected>Default codecs</option>
-            <option value="VP8/90000">VP8</option>
-            <option value="H264/90000">H264</option>
+        <select id="video-framerate">
+            <option value="30" selected>Default framerate</option>
+            <option value="15">15 fps</option>
+            <option value="30">30 fps</option>
+            <option value="60">60 fps</option>
         </select>
     </div>
 
