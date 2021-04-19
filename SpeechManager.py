@@ -1,46 +1,116 @@
+import asyncio
+import concurrent
+import logging
+
+import av
+import pyaudio
+from aiortc.mediastreams import MediaStreamError
 from danspeech import Recognizer
 from danspeech.pretrained_models import TransferLearned
 from danspeech.audio.resources import Microphone
 from danspeech.language_models import DSL3gram
+from pymitter import EventEmitter
+
+logger = logging.getLogger("SpeechManager")
+p = pyaudio.PyAudio()
 
 
-# Get a list of microphones found by PyAudio
-mic_list = Microphone.list_microphone_names()
-mic_list_with_numbers = list(zip(range(len(mic_list)), mic_list))
-print("Available microphones: {0}".format(mic_list_with_numbers))
-#
-# class MicInput:
+class TrackStream:
+    def __init__(self, track, samp_rate):
+        self.track = track
+        self.samp_rate = samp_rate
+        self.stream = p.open(rate=samp_rate, format=pyaudio.paInt16, channels=1, output=True, input=True)
+        self.thread_loop = None
+        self.loop = asyncio.get_event_loop()
+        self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=2)
+
+    def startWriting(self):
+        self.loop = asyncio.get_event_loop()
+        # with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+        #     self.executor = executor
+        #     self.loop.run_in_executor(self.executor, self.executorRun)
+
+    def executorRun(self):
+        self.thread_loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(self.thread_loop)
+        self.thread_loop.run_until_complete(self.writeToStream())
+
+    async def writeToStream(self):
+        logger.info("Running audio track frames...")
+
+        while True:
+            await asyncio.sleep(0)
+            try:
+                # logger.info("Getting frame")
+                frame = await self.track.recv()
+
+                # logger.info("got frame")
+                if type(frame) is av.audio.frame.AudioFrame:
+                    # logger.info("write stream")
+                    self.loop.run_in_executor(self.executor, self.stream.write, frame.to_ndarray().tobytes())
+            except MediaStreamError as e:
+                logger.error(str(e))
+                return
+            except Exception as e:
+                logger.error(str(e))
+                return
 
 
-# Choose the microphone
-mic_number = input("Pick the number of the microphone you would like to use: ")
+class MicInput(Microphone):
+    def __init__(self, sampling_rate=16000, chunk_size=1024, pyaudio_stream=None):
+        super().__init__(sampling_rate=sampling_rate, chunk_size=chunk_size)
+        self.pyaudio_stream = pyaudio_stream
 
-# Init a microphone object
-m = Microphone(sampling_rate=16000, device_index=int(mic_number))
+    def __enter__(self):
+        assert self.stream is None, "This audio source is already inside a context manager"
+        self.audio = self.pyaudio_module.PyAudio()
+        try:
+            self.stream = Microphone.MicrophoneStream(self.pyaudio_stream)
+        except Exception:
+            self.audio.terminate()
+        return self
 
-# Init a DanSpeech model and create a Recognizer instance
-model = TransferLearned()
-recognizer = Recognizer(model=model)
 
-# Try using the DSL 3 gram language model
-try:
-    lm = DSL3gram()
-    recognizer.update_decoder(lm=lm)
-except ImportError:
-    print("ctcdecode not installed. Using greedy decoding.")
+class DanSpeecher():
+    def __init__(self, mic: Microphone):
+        # Variables
+        self.transcribing = False
 
-print("Speek a lot to adjust silence detection from microphone...")
-with m as source:
-    recognizer.adjust_for_speech(source, duration=5)
+        # Init a microphone object
+        self.m = mic
 
-# Enable streaming
-recognizer.enable_streaming()
+        # Init a DanSpeech model and create a Recognizer instance
+        self.model = TransferLearned()
+        self.recognizer = Recognizer(model=self.model)
 
-# Create the streaming generator which runs a background thread listening to the microphone stream
-generator = recognizer.streaming(source=m)
+        # Try using the DSL 3 gram language model
+        try:
+            self.lm = DSL3gram()
+            self.recognizer.update_decoder(lm=self.lm)
+        except ImportError:
+            logger.info("ctcdecode not installed. Using greedy decoding.")
 
-# The below code runs for a long time. The generator returns transcriptions of spoken speech from your microphone.
-print("Speak")
-for i in range(100000):
-    trans = next(generator)
-    print(trans)
+        logger.info("Speak a lot to adjust silence detection from microphone...")
+        with self.m as source:
+            self.recognizer.adjust_for_speech(source, duration=5)
+
+        # Enable streaming
+        self.recognizer.enable_streaming()
+
+        # Create the streaming generator which runs a background thread listening to the microphone stream
+        self.generator = self.recognizer.streaming(source=self.m)
+
+    def get_transcription(self):
+        return next(self.generator)
+
+    def startTranscriber(self, emitter: EventEmitter):
+        self.transcribing = True
+        while True:
+            if not self.transcribing:
+                break
+            transcription = self.get_transcription()
+            logger.debug("Transcription: " + str(transcription))
+            emitter.emit("command", transcription)
+
+    def stop(self):
+        self.transcribing = False

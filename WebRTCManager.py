@@ -1,18 +1,21 @@
 import asyncio
+import concurrent
 import json
 import logging
 import os
-import queue
 import random
 import re
 import subprocess
+import threading
 import uuid
 import platform
-
+import av
+import pyaudio
 from aiortc import RTCPeerConnection, RTCSessionDescription
 from aiortc.contrib.media import MediaPlayer, MediaRelay, MediaRecorder
 from aiortc.mediastreams import MediaStreamError, MediaStreamTrack
 from pymitter import EventEmitter
+import SpeechManager
 
 ROOT = os.path.dirname(__file__)
 
@@ -20,12 +23,14 @@ logger = logging.getLogger("pc")
 pcs = set()
 players = []
 relay = MediaRelay()
+samp_rate = 16000
 
 RTCMessage = EventEmitter()
 
 audio = None
 video = None
-client_audio = MediaStreamTrack()
+client_audio = None
+danspeecher = None
 
 
 def init(log_level):
@@ -81,13 +86,14 @@ def getLocalMedia(params):
 def addMediaTracks(pc, params):
     global audio, video, players
 
-    if not players:
-        audio, video = getLocalMedia(params)
+    # if not players:
+    #     audio, video = getLocalMedia(params)
 
     for t in pc.getTransceivers():
         if t.kind == "audio" and audio:
             logger.info(msg="adding audio")
-            pc.addTrack(relay.subscribe(audio.audio))
+            if audio.audio:
+                pc.addTrack(relay.subscribe(audio.audio))
         elif t.kind == "video" and video:
             logger.info(msg="adding video")
             pc.addTrack(video)
@@ -142,11 +148,45 @@ async def offer(request):
                     logger.info(str(e))
                 players.remove(player)
 
+    async def speechRecognizion(track):
+        global danspeecher
+        if not danspeecher:
+            log_info("Creating danspeecher")
+            # with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+            #     loop = asyncio.get_event_loop()
+                # loop.run_in_executor(executor, speechRecognizion, client_audio)
+
+                # loop = asyncio.new_event_loop()
+                # asyncio.set_event_loop(loop)
+            trackStream = SpeechManager.TrackStream(track, samp_rate)
+            await trackStream.writeToStream()
+                # Run on another thread - so we can continue
+                # threading.Thread(target=sendAudio, args=(client_audio, stream), daemon=True)
+                # loop.run_in_executor(pool, sendAudio, client_audio, stream)
+                # loop.run_in_executor(executor, asyncio.ensure_future, sendAudio(client_audio, stream))
+                # executor.submit(sendAudio, client_audio, stream)
+
+            mic = SpeechManager.MicInput(sampling_rate=samp_rate, pyaudio_stream=trackStream.stream)
+
+                # executor = concurrent.futures.ProcessPoolExecutor(2)
+                # danspeecher = asyncio.ensure_future(loop.run_in_executor(executor, SpeechManager.DanSpeecher, mic))
+            danSpeecher = SpeechManager.DanSpeecher(mic=mic)
+
+                # Run on another thread - so we can continue
+            danSpeecher.startTranscriber(RTCMessage)
+                # loop.run_in_executor(executor, danSpeecher.startTranscriber, RTCMessage)
+                # threading.Thread(target=danspeecher.startTranscriber, args=(RTCMessage,), daemon=True)
+                # danspeecher.startTranscriber(RTCMessage)
+
     @pc.on("connectionstatechange")
     async def on_connectionstatechange():
         log_info("Connection state is %s", pc.connectionState)
         if pc.connectionState == "failed":
             await close()
+        if pc.connectionState == "connected":
+            if client_audio:
+                if not danspeecher:
+                    await speechRecognizion(client_audio)
 
     @pc.on("iceconnectionstatechange")
     async def on_iceconnectionstatechange():
@@ -170,19 +210,6 @@ async def offer(request):
     # handle offer
     await pc.setRemoteDescription(offer)
 
-    async def sendAudio(track):
-        log_info("Running audio track frames...")
-        buffer = queue.Queue()
-
-        while True:
-            try:
-                frame = await track.recv()
-            except MediaStreamError:
-                return
-            buffer.put(frame)
-
-    await sendAudio(client_audio)
-
     # prepare local media
     addMediaTracks(pc, params)
 
@@ -200,3 +227,7 @@ async def on_shutdown():
     coros = [pc.close() for pc in pcs]
     await asyncio.gather(*coros)
     pcs.clear()
+
+    global danspeecher
+    if danspeecher:
+        danspeecher.stop()
