@@ -23,7 +23,6 @@ logger = logging.getLogger("pc")
 pcs = set()
 players = []
 relay = MediaRelay()
-samp_rate = 16000
 
 RTCMessage = EventEmitter()
 
@@ -152,31 +151,41 @@ async def offer(request):
         global danspeecher
         if not danspeecher:
             log_info("Creating danspeecher")
-            # with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
-            #     loop = asyncio.get_event_loop()
                 # loop.run_in_executor(executor, speechRecognizion, client_audio)
 
                 # loop = asyncio.new_event_loop()
                 # asyncio.set_event_loop(loop)
-            trackStream = SpeechManager.TrackStream(track, samp_rate)
-            await trackStream.writeToStream()
+            print("trackstream")
+            trackStream = SpeechManager.TrackStream(track)
+            await trackStream.intializeStream()
+            # Run on another thread - so we can continue
+            asyncio.ensure_future(trackStream.writeToStream())
                 # Run on another thread - so we can continue
                 # threading.Thread(target=sendAudio, args=(client_audio, stream), daemon=True)
                 # loop.run_in_executor(pool, sendAudio, client_audio, stream)
                 # loop.run_in_executor(executor, asyncio.ensure_future, sendAudio(client_audio, stream))
                 # executor.submit(sendAudio, client_audio, stream)
 
-            mic = SpeechManager.MicInput(sampling_rate=samp_rate, pyaudio_stream=trackStream.stream)
+            await asyncio.sleep(5)
+            print("micsetup")
+            mic = SpeechManager.MicInput(sampling_rate=trackStream.samp_rate, pyaudio_stream=trackStream.stream)
 
-                # executor = concurrent.futures.ProcessPoolExecutor(2)
-                # danspeecher = asyncio.ensure_future(loop.run_in_executor(executor, SpeechManager.DanSpeecher, mic))
-            danSpeecher = SpeechManager.DanSpeecher(mic=mic)
+            with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+                newloop = asyncio.get_event_loop()
+            # executor = concurrent.futures.ProcessPoolExecutor(2)
+            #     danspeecherFuture = asyncio.ensure_future(loop.run_in_executor(executor, SpeechManager.DanSpeecher, mic))
+
+                # danSpeecher = await newloop.run_in_executor(executor, SpeechManager.DanSpeecher, mic)
+                # danSpeecher = await asyncio.wait([SpeechManager.DanSpeecher(mic=mic)])
+                danSpeecher = SpeechManager.DanSpeecher(mic=mic)
+                await danSpeecher.adjust()
+                await danSpeecher.createGenerator()
 
                 # Run on another thread - so we can continue
-            danSpeecher.startTranscriber(RTCMessage)
-                # loop.run_in_executor(executor, danSpeecher.startTranscriber, RTCMessage)
-                # threading.Thread(target=danspeecher.startTranscriber, args=(RTCMessage,), daemon=True)
-                # danspeecher.startTranscriber(RTCMessage)
+                # danSpeecher.startTranscriber(RTCMessage)
+                newloop.run_in_executor(executor, danSpeecher.startTranscriber, RTCMessage)
+            # threading.Thread(target=danspeecher.startTranscriber, args=(RTCMessage,), daemon=True)
+            # danspeecher.startTranscriber(RTCMessage)
 
     @pc.on("connectionstatechange")
     async def on_connectionstatechange():
