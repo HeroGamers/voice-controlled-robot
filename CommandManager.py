@@ -28,9 +28,11 @@ setup_logger()
 class Command:
     def __init__(self, commandDict: dict):
         self.command = commandDict["command"]
-        self.distance = commandDict["distance"]
-        self.number = commandDict["number"]
-        self.debug_words = {"commandWord": commandDict["word"], "distanceWord": commandDict["distance_word"], "numberWord": commandDict["number_word"]}
+        self.distance = commandDict["distance"] if "distance" in commandDict else None
+        self.number = commandDict["number"] if "number" in commandDict else None
+        self.debug_words = {"commandWord": commandDict["word"],
+                            "distanceWord": commandDict["distance_word"] if "distance_word" in commandDict else None,
+                            "numberWord": commandDict["number_word"] if "number_word" in commandDict else None}
 
     def run(self, robot: Robot):
         # GPIO kode:

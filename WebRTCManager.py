@@ -3,17 +3,13 @@ import concurrent
 import json
 import logging
 import os
-import random
 import re
 import subprocess
 import threading
 import uuid
 import platform
-import av
-import pyaudio
 from aiortc import RTCPeerConnection, RTCSessionDescription
-from aiortc.contrib.media import MediaPlayer, MediaRelay, MediaRecorder
-from aiortc.mediastreams import MediaStreamError, MediaStreamTrack
+from aiortc.contrib.media import MediaPlayer, MediaRelay
 from pymitter import EventEmitter
 import SpeechManager
 
@@ -25,6 +21,7 @@ players = []
 relay = MediaRelay()
 
 RTCMessage = EventEmitter()
+enableOnBoardSpeechRecognizion = False
 
 audio = None
 video = None
@@ -71,13 +68,13 @@ def getLocalMedia(params):
         video = MediaPlayer('/dev/video{}'.format(camera_num), format="v4l2", options=options)
     players.append(video)
 
-    if not audio:
-        test_audio = random.randint(0, 1)
-        if test_audio == 0:
-            audio = MediaPlayer(os.path.join(ROOT, "public/totally_not_a_rickroll.flac"))
-        elif test_audio == 1:
-            audio = MediaPlayer(os.path.join(ROOT, "public/Raining Tacos - Parry Gripp & BooneBum.mp3"))
-    players.append(audio)
+    # if not audio:
+    #     test_audio = random.randint(0, 1)
+    #     if test_audio == 0:
+    #         audio = MediaPlayer(os.path.join(ROOT, "public/totally_not_a_rickroll.flac"))
+    #     elif test_audio == 1:
+    #         audio = MediaPlayer(os.path.join(ROOT, "public/Raining Tacos - Parry Gripp & BooneBum.mp3"))
+    # players.append(audio)
 
     return audio, relay.subscribe(video.video)
 
@@ -112,7 +109,7 @@ async def offer(request):
 
     log_info("Created for %s", request.remote)
 
-    recorder = MediaRecorder("./temp_media/temp_audio.wav")
+    # recorder = MediaRecorder("./temp_media/temp_audio.wav")
 
     @pc.on("datachannel")
     def on_datachannel(channel):
@@ -122,7 +119,7 @@ async def offer(request):
                 if message.startswith("ping"):
                     channel.send("pong" + message[4:])
                 elif message.startswith("command"):
-                    command = message[7:].strip()
+                    command = message[9:].strip()
                     logger.info("Command received: " + command)
                     RTCMessage.emit("command", command)
 
@@ -166,24 +163,46 @@ async def offer(request):
                 # loop.run_in_executor(executor, asyncio.ensure_future, sendAudio(client_audio, stream))
                 # executor.submit(sendAudio, client_audio, stream)
 
-            await asyncio.sleep(5)
+            await asyncio.sleep(1)
             print("micsetup")
             mic = SpeechManager.MicInput(sampling_rate=trackStream.samp_rate, pyaudio_stream=trackStream.stream)
 
-            with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
-                newloop = asyncio.get_event_loop()
+            def doDanSpeecher():
+                danSpeecher = SpeechManager.DanSpeecher(mic=mic)
+                # danSpeecher.adjust()
+                # danSpeecher.createGenerator()
+                # danSpeecher.startTranscriber(RTCMessage)
+
+                t1 = threading.Thread(target=danSpeecher.adjust, daemon=True)
+                print("running adjuster task")
+                t1.start()
+                t1.join()
+                t2 = threading.Thread(target=danSpeecher.createGenerator, daemon=True)
+                print("running generator task")
+                t2.start()
+                t2.join()
+                t3 = threading.Thread(target=danSpeecher.startTranscriber, args=(RTCMessage,), daemon=True)
+                print("running transcriber task")
+                t3.start()
+
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                loop = asyncio.get_event_loop()
+                await loop.run_in_executor(executor, doDanSpeecher)
+
+
+
             # executor = concurrent.futures.ProcessPoolExecutor(2)
             #     danspeecherFuture = asyncio.ensure_future(loop.run_in_executor(executor, SpeechManager.DanSpeecher, mic))
 
                 # danSpeecher = await newloop.run_in_executor(executor, SpeechManager.DanSpeecher, mic)
                 # danSpeecher = await asyncio.wait([SpeechManager.DanSpeecher(mic=mic)])
-                danSpeecher = SpeechManager.DanSpeecher(mic=mic)
-                await danSpeecher.adjust()
-                await danSpeecher.createGenerator()
+                # danSpeecher = SpeechManager.DanSpeecher(mic=mic)
+                # await danSpeecher.adjust()
+                # await danSpeecher.createGenerator()
+                # await danSpeecher.startTranscriber(RTCMessage)
 
                 # Run on another thread - so we can continue
-                # danSpeecher.startTranscriber(RTCMessage)
-                newloop.run_in_executor(executor, danSpeecher.startTranscriber, RTCMessage)
+                # newloop.run_in_executor(executor, danSpeecher.startTranscriber, RTCMessage)
             # threading.Thread(target=danspeecher.startTranscriber, args=(RTCMessage,), daemon=True)
             # danspeecher.startTranscriber(RTCMessage)
 
@@ -194,8 +213,11 @@ async def offer(request):
             await close()
         if pc.connectionState == "connected":
             if client_audio:
-                if not danspeecher:
-                    await speechRecognizion(client_audio)
+                if enableOnBoardSpeechRecognizion:
+                    if not danspeecher:
+                        await speechRecognizion(client_audio)
+                else:
+                    print("On board speech recognition is disabled.")
 
     @pc.on("iceconnectionstatechange")
     async def on_iceconnectionstatechange():

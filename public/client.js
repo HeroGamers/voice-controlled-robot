@@ -166,7 +166,11 @@ function start() {
     }
 
     var constraints = {
-        audio: document.getElementById('use-audio').checked,
+        audio: document.getElementById('use-audio').checked ? {
+            sampleRate: 16000,
+            sampleSize: 16,
+            channelCount: {exact: 1}
+        } : false,
         video: false
     };
 
