@@ -34,8 +34,9 @@ class Robot:
             if self.running:
                 # If any commands in queue
                 if self.queue.queue:
-                    next_command = self.queue.queue[0]
+                    next_command: CommandManager.Command = self.queue.queue[0]
                     self.queue.queue.pop(0)
+                    print("Running command: " + str(next_command.command))
                     await next_command.run(self)
                 else:
                     await asyncio.sleep(1)
