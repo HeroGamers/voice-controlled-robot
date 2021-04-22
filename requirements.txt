@@ -2,6 +2,7 @@ gpiozero==1.5.1
 websockets==8.1
 asyncio==3.4.3
 pymitter==0.3.0
+pyee==8.1.0
 aiortc==1.2.0
 danspeech==1.0.3
 PyAudio==0.2.11

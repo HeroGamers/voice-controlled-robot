@@ -1,5 +1,5 @@
-from gpiozero import DigitalOutputDevice, Motor, Servo, CompositeDevice
-from time import sleep
+import asyncio
+from gpiozero import Motor, Servo
 import CommandManager
 
 # Unchangeable variables
@@ -12,27 +12,100 @@ class Robot:
     def __init__(self, leftDC_args, rightDC_args, servo_args):
         self.leftDC = DCMotor(*leftDC_args)
         self.rightDC = DCMotor(*rightDC_args)
-
-        self.frontServo = Servo(*servo_args)
+        self.frontServo = ServoMotor(*servo_args)
 
         # Make new command queue for robot
         self.queue = CommandManager.CommandQueue()
 
-    def forward(self, centimeters):
+        self.running = True
+        self.current_command = None
+
+        self.loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(self.loop)
+
+        self.loop.create_task(self.run())
+        self.loop.run_forever()
+
+    async def run(self):
+        # Main loop for checking for commands and running them
+        while True:
+            # If robot is running
+            if self.running:
+                # If any commands in queue
+                if self.queue.queue:
+                    next_command = self.queue.queue[0]
+                    self.queue.queue.pop(0)
+                    await next_command.run(self)
+                else:
+                    await asyncio.sleep(1)
+            else:
+                await asyncio.sleep(1)
+
+    async def forward(self, centimeters):
         # TODO maybe these functions should be async
-        self.leftDC.forward(centimeters)
+        if not self.frontServo.is_centered():
+            self.frontServo.center()
+
+        # Wait for servo to center
+        while self.frontServo.is_running():
+            await asyncio.sleep(0.2)
+
         self.rightDC.forward(centimeters)
+        self.leftDC.forward(centimeters)
 
-    def backward(self, centimeters):
+        while self.isRunning():
+            await asyncio.sleep(0.2)
+
+    async def backward(self, centimeters):
         # TODO maybe these functions should be async
-        self.leftDC.backward(centimeters)
+        if not self.frontServo.is_centered():
+            self.frontServo.center()
+
+        # Wait for servo to center
+        while self.frontServo.is_running():
+            await asyncio.sleep(0.2)
+
         self.rightDC.backward(centimeters)
+        self.leftDC.backward(centimeters)
 
-    def turn_right(self):
-        print("aaaaaa")
+        while self.isRunning():
+            await asyncio.sleep(0.2)
 
-    def turn_left(self):
-        print("bbbbbb")
+    async def turn_right(self, degrees):
+        self.frontServo.turn(degrees)
+
+        # Wait for servo to turn
+        while self.frontServo.is_running():
+            await asyncio.sleep(0.2)
+
+        # TODO: CALCULATE DISTANCE TO TURN
+        self.rightDC.forward(10)
+        self.leftDC.backward(10)
+
+        while self.isRunning():
+            await asyncio.sleep(0.2)
+
+    async def turn_left(self, degrees):
+        self.frontServo.turn(-degrees)
+
+        # Wait for servo to turn
+        while self.frontServo.is_running():
+            await asyncio.sleep(0.2)
+
+        # TODO: CALCULATE DISTANCE TO TURN
+        self.rightDC.forward(10)
+        self.leftDC.backward(10)
+
+        while self.isRunning():
+            await asyncio.sleep(0.2)
+
+    def isRunning(self):
+        return bool(self.leftDC.is_running() or self.rightDC.is_running() or self.frontServo.is_running())
+
+    def stop(self):
+        self.leftDC.stop()
+        self.rightDC.stop()
+        self.frontServo.stop()
 
 
 class MotorFactory:
@@ -62,17 +135,32 @@ class DCMotor(MotorFactory):
     def backward(self, distance):
         self.motor.backward(distance)
 
-    def off(self):
+    def stop(self):
         self.motor.stop()
+
+    def is_running(self):
+        return self.motor.is_active
 
 
 class ServoMotor(MotorFactory):
     def __init__(self, servo_pin):
         super().__init__("ServoMotor", servo_pin)
 
+    def is_centered(self):
+        return bool(self.motor.value == 0)
+
+    def center(self):
+        self.motor.value = 0
+
     def turn(self, degrees):
         # TODO calculate value between -1 and +1 (min and max), for degrees given
         self.motor.value = 1
+
+    def stop(self):
+        self.motor.detach()
+
+    def is_running(self):
+        return self.motor.is_active
 
 
 # Shared functions

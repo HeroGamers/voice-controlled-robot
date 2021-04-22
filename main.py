@@ -1,5 +1,4 @@
 import platform
-
 import CommandManager
 import RobotManager
 import WebApp
@@ -16,17 +15,20 @@ if platform.system() == "Linux":
 RTCMessage = WebApp.WebRTCManager.RTCMessage
 
 
+# Command listener from the client webpage - all text commands are recieved here
 @RTCMessage.on("command")
-def onCommand(command):
+async def onCommand(command):
     print("Main received command: " + command)
-    # Parse commands
+    # Parse the different commands into separate Command's, for example:
+    # "to frem og to tilbage" > [Command<to frem>, Command<to tilbage>]
     commands = CommandManager.CommandParser(command).commands
 
+    # If a robot is available
     if robot:
-        # If first command is stop, then empty queue and stop robot
+        # If first command is stop in the list of commands, then run command immediately
         if commands[0].command == 0:
             robot.queue.empty()
-            commands[0].run(robot)
+            await commands[0].run(robot)
         else:
             # add commands to queue
             robot.queue.addToQueue(commands)

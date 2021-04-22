@@ -34,18 +34,44 @@ class Command:
                             "distanceWord": commandDict["distance_word"] if "distance_word" in commandDict else None,
                             "numberWord": commandDict["number_word"] if "number_word" in commandDict else None}
 
-    def run(self, robot: Robot):
-        # GPIO kode:
-        if self.command == 100:
-            robot.forward(self.number*self.distance)
-        elif self.command == -1:
-            robot.backward(self.number*self.distance)
+    # GPIO kode:
+    async def run(self, robot: Robot):
         print(self, robot)
+        robot.current_command = self
+
+        # Stop command
+        if self.command == 0:
+            # Empty queue and stop robot
+            robot.running = False
+            robot.queue.empty()
+            # some stop stuff, to cancel a command that is currently running
+            robot.stop()
+        else:
+            robot.running = True
+            # Forward command
+            if self.command == 1:
+                await robot.forward(self.number*self.distance)
+            # Backwards command
+            elif self.command == -1:
+                await robot.backward(self.number*self.distance)
+            # Turn right command
+            elif self.command == 2:
+                await robot.turn_right(90)
+            # Turn left command
+            elif self.command == 3:
+                await robot.turn_left(90)
+            # Turn 180 degrees command
+            elif self.command == 4:
+                await robot.turn_right(180)
+            else:
+                print("fuck?")
+
+            # Do something
 
 
 class CommandQueue:
     def __init__(self):
-        self.queue = []
+        self.queue: [Command] = []
 
     def addToQueue(self, commandList: list):
         self.queue = self.queue + commandList
@@ -64,9 +90,8 @@ class CommandParser:
 
     def textToCommands(self):
         # TODO: Better text to command parser
-        command_keywords = {"kør": 100,
-                            "stop": 0,
-                            "frem": 1,
+        command_keywords = {"stop": 0,
+                            "frem": 1,  # "kør": 1,
                             "tilbage": -1, "baglæns": -1, "bagud": -1,
                             "højre": 2,
                             "venstre": 3}

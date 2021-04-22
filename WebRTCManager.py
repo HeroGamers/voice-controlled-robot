@@ -10,7 +10,7 @@ import uuid
 import platform
 from aiortc import RTCPeerConnection, RTCSessionDescription
 from aiortc.contrib.media import MediaPlayer, MediaRelay
-from pymitter import EventEmitter
+from pyee import AsyncIOEventEmitter
 import SpeechManager
 
 ROOT = os.path.dirname(__file__)
@@ -20,7 +20,7 @@ pcs = set()
 players = []
 relay = MediaRelay()
 
-RTCMessage = EventEmitter()
+RTCMessage = AsyncIOEventEmitter()
 enableOnBoardSpeechRecognizion = False
 
 audio = None
