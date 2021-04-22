@@ -162,7 +162,9 @@ class ServoMotor(MotorFactory):
         self.motor.detach()
 
     def is_running(self):
-        return self.motor.is_active
+        # TODO: can we check if servo is running?
+        # return self.motor.is_active
+        return False
 
 
 # Shared functions
