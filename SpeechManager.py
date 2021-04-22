@@ -1,7 +1,7 @@
 import asyncio
 import audioop
 import collections
-import concurrent
+from concurrent.futures import ThreadPoolExecutor
 import logging
 import math
 import threading
@@ -36,7 +36,7 @@ class TrackStream:
         self.use_blocking = True
         self.loop = asyncio.get_event_loop()
         self.buffer = []
-        self.executor = concurrent.futures.ThreadPoolExecutor(max_workers=3)
+        self.executor = ThreadPoolExecutor(max_workers=3)
 
     def callback(self):
         print("mmmh")

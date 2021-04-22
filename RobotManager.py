@@ -20,11 +20,12 @@ class Robot:
         self.running = True
         self.current_command = None
 
+        # Get a new loop that we can use for the looping task
         self.loop = asyncio.new_event_loop()
         asyncio.set_event_loop(self.loop)
 
-        self.loop.create_task(self.run())
-        self.loop.run_forever()
+        # Start the check for command loop
+        asyncio.ensure_future(self.run())
 
     async def run(self):
         # Main loop for checking for commands and running them

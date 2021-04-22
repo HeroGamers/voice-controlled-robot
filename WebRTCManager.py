@@ -1,5 +1,5 @@
 import asyncio
-import concurrent
+from concurrent.futures import ThreadPoolExecutor
 import json
 import logging
 import os
@@ -185,13 +185,13 @@ async def offer(request):
                 print("running transcriber task")
                 t3.start()
 
-            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+            with ThreadPoolExecutor(max_workers=1) as executor:
                 loop = asyncio.get_event_loop()
                 await loop.run_in_executor(executor, doDanSpeecher)
 
 
 
-            # executor = concurrent.futures.ProcessPoolExecutor(2)
+            # executor = ProcessPoolExecutor(2)
             #     danspeecherFuture = asyncio.ensure_future(loop.run_in_executor(executor, SpeechManager.DanSpeecher, mic))
 
                 # danSpeecher = await newloop.run_in_executor(executor, SpeechManager.DanSpeecher, mic)

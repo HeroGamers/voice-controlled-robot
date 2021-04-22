@@ -18,6 +18,10 @@ async def onCommand(command):
     # "to frem og to tilbage" > [Command<to frem>, Command<to tilbage>]
     commands = CommandManager.CommandParser(command).commands
 
+    if not commands:
+        print("No commands?")
+        return
+
     # If a robot is available
     if robot:
         # If first command is stop in the list of commands, then run command immediately
