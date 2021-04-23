@@ -46,7 +46,7 @@ class Robot:
             else:
                 await asyncio.sleep(1)
 
-    async def forward(self, centimeters, speed=1):
+    async def forward(self, centimeters):
         # TODO maybe these functions should be async
         if not self.frontServo.is_centered():
             self.frontServo.center()
@@ -55,13 +55,13 @@ class Robot:
         while self.frontServo.is_running():
             await asyncio.sleep(0.2)
 
-        self.rightDC.forward(centimeters, speed)
-        self.leftDC.forward(centimeters, speed)
+        self.rightDC.forward(centimeters)
+        self.leftDC.forward(centimeters)
 
         while self.isRunning():
             await asyncio.sleep(0.2)
 
-    async def backward(self, centimeters, speed=1):
+    async def backward(self, centimeters):
         # TODO maybe these functions should be async
         if not self.frontServo.is_centered():
             self.frontServo.center()
@@ -70,13 +70,13 @@ class Robot:
         while self.frontServo.is_running():
             await asyncio.sleep(0.2)
 
-        self.rightDC.backward(centimeters, speed)
-        self.leftDC.backward(centimeters, speed)
+        self.rightDC.backward(centimeters)
+        self.leftDC.backward(centimeters)
 
         while self.isRunning():
             await asyncio.sleep(0.2)
 
-    async def turn_right(self, degrees, speed=1):
+    async def turn_right(self, degrees):
         self.frontServo.turn(degrees)
 
         # Wait for servo to turn
@@ -84,13 +84,13 @@ class Robot:
             await asyncio.sleep(0.2)
 
         # TODO: CALCULATE DISTANCE TO TURN
-        self.rightDC.forward(10, speed)
-        self.leftDC.backward(10, speed)
+        self.rightDC.forward(10)
+        self.leftDC.backward(10)
 
         while self.isRunning():
             await asyncio.sleep(0.2)
 
-    async def turn_left(self, degrees, speed=1):
+    async def turn_left(self, degrees):
         self.frontServo.turn(-degrees)
 
         # Wait for servo to turn
@@ -98,31 +98,31 @@ class Robot:
             await asyncio.sleep(0.2)
 
         # TODO: CALCULATE DISTANCE TO TURN
-        self.rightDC.backward(10, speed)
-        self.leftDC.forward(10, speed)
+        self.rightDC.backward(10)
+        self.leftDC.forward(10)
 
         while self.isRunning():
             await asyncio.sleep(0.2)
 
-    def forward_nonasync(self, centimeters, speed=1):
+    def forward_nonasync(self, centimeters):
         self.frontServo.center()
-        self.rightDC.forward(centimeters, speed)
-        self.leftDC.forward(centimeters, speed)
+        self.rightDC.forward(centimeters)
+        self.leftDC.forward(centimeters)
 
-    def backward_nonasync(self, centimeters, speed=1):
+    def backward_nonasync(self, centimeters):
         self.frontServo.center()
-        self.rightDC.backward(centimeters, speed)
-        self.leftDC.backward(centimeters, speed)
+        self.rightDC.backward(centimeters)
+        self.leftDC.backward(centimeters)
 
-    def turn_right_nonasync(self, degrees, speed=1):
+    def turn_right_nonasync(self, degrees):
         self.frontServo.turn(degrees)
-        self.rightDC.forward(10, speed)
-        self.leftDC.backward(10, speed)
+        self.rightDC.forward(10)
+        self.leftDC.backward(10)
 
-    def turn_left_nonasync(self, degrees, speed=1):
+    def turn_left_nonasync(self, degrees):
         self.frontServo.turn(-degrees)
-        self.rightDC.backward(10, speed)
-        self.leftDC.forward(10, speed)
+        self.rightDC.backward(10)
+        self.leftDC.forward(10)
 
     def isRunning(self):
         return bool(self.leftDC.is_running() or self.rightDC.is_running() or self.frontServo.is_running())
@@ -161,14 +161,14 @@ class DCMotor(MotorFactory):
         super().__init__("DCMotor", forward_pin, backward_pin)
         self.speed = speed
 
-    def forward(self, distance, speed=1):
-        self.motor.forward(speed)
+    def forward(self, distance):
+        self.motor.forward(self.speed)
         thread = threading.Thread(target=self.wait_distance, args=(distance,))
         thread.daemon = True
         thread.start()
 
-    def backward(self, distance, speed=1):
-        self.motor.backward(speed)
+    def backward(self, distance):
+        self.motor.backward(self.speed)
         thread = threading.Thread(target=self.wait_distance, args=(distance,))
         thread.daemon = True
         thread.start()
