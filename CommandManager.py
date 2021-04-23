@@ -2,7 +2,6 @@ import logging as command_logging
 import os
 import sys
 from logging.handlers import TimedRotatingFileHandler
-from RobotManager import Robot
 
 logger = command_logging.getLogger("commands")
 
@@ -35,7 +34,7 @@ class Command:
                             "numberWord": commandDict["number_word"] if "number_word" in commandDict else None}
 
     # GPIO kode:
-    async def run(self, robot: Robot):
+    async def run(self, robot):
         print(self, robot)
         robot.current_command = self
 
