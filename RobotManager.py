@@ -154,7 +154,8 @@ class PIDController:
 class Encoder:
     def __init__(self, pins):
         # Define pins
-        self.signals_per_meter = 1000
+        self.signals_per_rotation = 1350
+        self.signals_per_meter = self.signals_per_rotation*10  # needs more
         self.outputA = DigitalInputDevice(pins["enc_a"])
         self.outputB = DigitalInputDevice(pins["enc_b"])
 
@@ -165,7 +166,8 @@ class Encoder:
         self.old_position = self.position
 
         # Listen for changes
-        self.outputA.when_activated = self._increment
+        self.outputB.when_activated = self._increment
+        self.outputB.when_deactivated = self._increment
 
     def _increment(self):
         self.position += 1
@@ -191,25 +193,22 @@ class DCMotor:
         self.speed = speed
 
     def forward(self, distance):
+        self.encoder.startDistanceTracking()
         self.motor.forward(self.speed)
         thread = threading.Thread(target=self.wait_distance, args=(distance,))
         thread.daemon = True
         thread.start()
 
     def backward(self, distance):
+        self.encoder.startDistanceTracking()
         self.motor.backward(self.speed)
         thread = threading.Thread(target=self.wait_distance, args=(distance,))
         thread.daemon = True
         thread.start()
 
     def wait_distance(self, distance):
-        i = 0
-        while True:
-            if i == 5:
-                break
-            print(self.encoder.position)
-            i += 1
-            sleep(1)
+        while self.encoder.getPositionChange() <= self.encoder.signals_per_rotation:
+            sleep(0.001)
         # TODO some function to check distance with encoder
         # maybe this function should be async - since when we have to wait for encoder to give distance,
         # everything else will be stopped while we wait for the motor to reach the set distance
