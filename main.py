@@ -52,7 +52,7 @@ if __name__ == "__main__":
     if platform.system() == "Linux":
         print("Using Linux - creating Robot...")
         # Create a robot with our pins
-        robot = RobotManager.Robot(leftDC_args=(3, 5), rightDC_args=(11, 13), servo_args=(19,))
+        robot = RobotManager.Robot(leftDC_args=("BOARD3", "BOARD5"), rightDC_args=("BOARD11", "BOARD13"), servo_args=("BOARD19",))
 
     print("Starting WebApp...")
     WebApp.start_app(WebAppArgs())
