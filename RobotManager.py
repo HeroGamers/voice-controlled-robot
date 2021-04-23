@@ -157,7 +157,7 @@ class MotorFactory:
 
 
 class DCMotor(MotorFactory):
-    def __init__(self, forward_pin, backward_pin, speed=0.5):
+    def __init__(self, forward_pin, backward_pin, speed=1):
         super().__init__("DCMotor", forward_pin, backward_pin)
         self.speed = speed
 
