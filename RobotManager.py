@@ -2,20 +2,21 @@ import asyncio
 import threading
 from time import sleep
 
-from gpiozero import Motor, Servo
+from gpiozero import Motor, Servo, DigitalInputDevice
 import CommandManager
 
 # Unchangeable variables
 
-# Arrays
-motors = []
-
 
 class Robot:
     def __init__(self, leftDC_args, rightDC_args, servo_args):
-        self.leftDC = DCMotor(*leftDC_args)
-        self.rightDC = DCMotor(*rightDC_args)
-        self.frontServo = ServoMotor(*servo_args)
+        self.leftDC = DCMotor(forward_pin=leftDC_args["motor_pos"], backward_pin=leftDC_args["motor_neg"],
+                              encoder_pins={"enc_a": leftDC_args["encoder_a"], "enc_b": leftDC_args["encoder_b"]},
+                              pwm_pin=leftDC_args["pwm_pin"])
+        self.rightDC = DCMotor(forward_pin=rightDC_args["motor_pos"], backward_pin=rightDC_args["motor_neg"],
+                               encoder_pins={"enc_a": rightDC_args["encoder_a"], "enc_b": rightDC_args["encoder_b"]},
+                               pwm_pin=rightDC_args["pwm_pin"])
+        self.frontServo = ServoMotor(servo_pin=servo_args["servo_pin"])
 
         # Make new command queue for robot
         self.queue = CommandManager.CommandQueue()
@@ -143,22 +144,50 @@ class Robot:
         sleep(5)
 
 
-class MotorFactory:
-    def __init__(self, type: str, *args):
+class PIDController:
+    def __init__(self, encoder, pwm_pin):
         # Define pins
-        self.motor = None
-        if type == "DCMotor":
-            self.motor = Motor(*args)
-        elif type == "ServoMotor":
-            self.motor = Servo(*args, min_pulse_width=0.4/1000, max_pulse_width=2.4/1000, frame_width=20/1000)
-
-        # Append motor to motors
-        motors.append(self)
+        self.encoder = encoder
+        self.output_pin = pwm_pin
 
 
-class DCMotor(MotorFactory):
-    def __init__(self, forward_pin, backward_pin, speed=1):
-        super().__init__("DCMotor", forward_pin, backward_pin)
+class Encoder:
+    def __init__(self, pins):
+        # Define pins
+        self.signals_per_meter = 1000
+        self.outputA = DigitalInputDevice(pins["enc_a"])
+        self.outputB = DigitalInputDevice(pins["enc_b"])
+
+        # Variable to increase as we go
+        self.position = 0
+
+        # Variable to put current position in at start of tracking
+        self.old_position = self.position
+
+        # Listen for changes
+        self.outputA.when_activated = self._increment
+
+    def _increment(self):
+        self.position += 1
+
+    def startDistanceTracking(self):
+        self.old_position = self.position
+
+    def getPositionChange(self):
+        return self.position-self.old_position
+
+    def getDistance(self):
+        position_change = self.getPositionChange()
+        meters_traveled = position_change/self.signals_per_meter
+        centimeters = meters_traveled*100
+        return {"cm": centimeters, "m": meters_traveled}
+
+
+class DCMotor:
+    def __init__(self, forward_pin, backward_pin, encoder_pins, pwm_pin, speed=1):
+        self.motor = Motor(forward_pin, backward_pin)
+        self.encoder = Encoder(encoder_pins)
+        self.pid = PIDController(self.encoder, pwm_pin)
         self.speed = speed
 
     def forward(self, distance):
@@ -174,10 +203,16 @@ class DCMotor(MotorFactory):
         thread.start()
 
     def wait_distance(self, distance):
+        i = 0
+        while True:
+            if i == 5:
+                break
+            print(self.encoder.position)
+            i += 1
+            sleep(1)
         # TODO some function to check distance with encoder
         # maybe this function should be async - since when we have to wait for encoder to give distance,
         # everything else will be stopped while we wait for the motor to reach the set distance
-        sleep(5)
         self.stop()
 
     def stop(self):
@@ -187,9 +222,9 @@ class DCMotor(MotorFactory):
         return self.motor.is_active
 
 
-class ServoMotor(MotorFactory):
-    def __init__(self, servo_pin):
-        super().__init__("ServoMotor", servo_pin)
+class ServoMotor:
+    def __init__(self, servo_pin, min_pulse_width=0.4/1000, max_pulse_width=2.4/1000, frame_width=20/1000):
+        self.motor = Servo(servo_pin, min_pulse_width=min_pulse_width, max_pulse_width=max_pulse_width, frame_width=frame_width)
 
     def is_centered(self):
         return bool(self.motor.value == 0)
@@ -199,7 +234,7 @@ class ServoMotor(MotorFactory):
 
     def turn(self, degrees):
         assert -90 <= degrees <= 90, "Degrees should be within -60 degrees and 60 degrees"
-        # TODO calculate value between -1 and +1 (min and max), for degrees given
+        # Calculates value between -1 and +1 (min and max), for degrees given
         self.motor.value = degrees/90
 
     def stop(self):
@@ -211,14 +246,14 @@ class ServoMotor(MotorFactory):
         return False
 
 
-# Shared functions
-def turnAllOff():
-    for motor in motors:
-        if callable(getattr(motor, "off", None)):
-            motor.off()
-
-
-def turnAllOn():
-    for motor in motors:
-        if callable(getattr(motor, "on", None)):
-            motor.on()
+# # Shared functions
+# def turnAllOff():
+#     for motor in motors:
+#         if callable(getattr(motor, "off", None)):
+#             motor.off()
+#
+#
+# def turnAllOn():
+#     for motor in motors:
+#         if callable(getattr(motor, "on", None)):
+#             motor.on()

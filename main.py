@@ -52,7 +52,11 @@ if __name__ == "__main__":
     if platform.system() == "Linux":
         print("Using Linux - creating Robot...")
         # Create a robot with our pins
-        robot = RobotManager.Robot(leftDC_args=("BOARD3", "BOARD5"), rightDC_args=("BOARD11", "BOARD13"), servo_args=("BOARD19",))
+        robot = RobotManager.Robot(leftDC_args={"motor_pos": "GPIO2", "motor_neg": "GPIO3",
+                                                "encoder_a": "GPIO4", "encoder_b": "GPIO17", "pwm_pin": "GPIO27"},
+                                   rightDC_args={"motor_pos": "GPIO22", "motor_neg": "GPIO10",
+                                                 "encoder_a": "GPIO9", "encoder_b": "GPIO11", "pwm_pin": "GPIO5"},
+                                   servo_args={"servo_pin": "GPIO6"})
 
     print("Starting WebApp...")
     WebApp.start_app(WebAppArgs())
