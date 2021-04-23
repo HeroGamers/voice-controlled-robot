@@ -1,4 +1,6 @@
 import asyncio
+from time import sleep
+
 from gpiozero import Motor, Servo
 import CommandManager
 
@@ -95,11 +97,31 @@ class Robot:
             await asyncio.sleep(0.2)
 
         # TODO: CALCULATE DISTANCE TO TURN
-        self.rightDC.forward(10)
-        self.leftDC.backward(10)
+        self.rightDC.backward(10)
+        self.leftDC.forward(10)
 
         while self.isRunning():
             await asyncio.sleep(0.2)
+
+    def forward_nonasync(self, centimeters):
+        self.frontServo.center()
+        self.rightDC.forward(centimeters)
+        self.leftDC.forward(centimeters)
+
+    def backward_nonasync(self, centimeters):
+        self.frontServo.center()
+        self.rightDC.backward(centimeters)
+        self.leftDC.backward(centimeters)
+
+    def turn_right_nonasync(self, degrees):
+        self.frontServo.turn(degrees)
+        self.rightDC.forward(10)
+        self.leftDC.backward(10)
+
+    def turn_left_nonasync(self, degrees):
+        self.frontServo.turn(-degrees)
+        self.rightDC.backward(10)
+        self.leftDC.forward(10)
 
     def isRunning(self):
         return bool(self.leftDC.is_running() or self.rightDC.is_running() or self.frontServo.is_running())
@@ -108,6 +130,16 @@ class Robot:
         self.leftDC.stop()
         self.rightDC.stop()
         self.frontServo.stop()
+
+    def test_nonasync(self):
+        self.forward_nonasync(10)
+        sleep(5)
+        self.backward_nonasync(10)
+        sleep(5)
+        self.turn_right_nonasync(1)
+        sleep(5)
+        self.turn_left_nonasync(1)
+        sleep(5)
 
 
 class MotorFactory:
