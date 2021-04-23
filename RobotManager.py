@@ -111,8 +111,8 @@ class Robot:
 
     def backward_nonasync(self, centimeters, speed=1):
         self.frontServo.center()
-        self.rightDC.backward(centimeters)
-        self.leftDC.backward(centimeters)
+        self.rightDC.backward(centimeters, speed)
+        self.leftDC.backward(centimeters, speed)
 
     def turn_right_nonasync(self, degrees, speed=1):
         self.frontServo.turn(degrees)
@@ -163,13 +163,13 @@ class DCMotor(MotorFactory):
 
     def forward(self, distance, speed=1):
         self.motor.forward(speed)
-        thread = threading.Thread(target=self.wait_distance, args=distance)
+        thread = threading.Thread(target=self.wait_distance, args=(distance,))
         thread.daemon = True
         thread.start()
 
     def backward(self, distance, speed=1):
         self.motor.backward(speed)
-        thread = threading.Thread(target=self.wait_distance, args=distance)
+        thread = threading.Thread(target=self.wait_distance, args=(distance,))
         thread.daemon = True
         thread.start()
 
