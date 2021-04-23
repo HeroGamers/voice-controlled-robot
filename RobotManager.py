@@ -150,7 +150,7 @@ class MotorFactory:
         if type == "DCMotor":
             self.motor = Motor(*args)
         elif type == "ServoMotor":
-            self.motor = Servo(*args)
+            self.motor = Servo(*args, min_pulse_width=0.4/1000, max_pulse_width=2.4/1000, frame_width=20/1000)
 
         # Append motor to motors
         motors.append(self)
@@ -198,8 +198,9 @@ class ServoMotor(MotorFactory):
         self.motor.value = 0
 
     def turn(self, degrees):
+        assert -90 <= degrees <= 90, "Degrees should be within -60 degrees and 60 degrees"
         # TODO calculate value between -1 and +1 (min and max), for degrees given
-        self.motor.value = 1
+        self.motor.value = degrees/90
 
     def stop(self):
         self.motor.detach()
