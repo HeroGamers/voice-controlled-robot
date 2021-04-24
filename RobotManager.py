@@ -1,4 +1,5 @@
 import asyncio
+import math
 import threading
 from time import sleep
 
@@ -6,6 +7,7 @@ from gpiozero import Motor, Servo, DigitalInputDevice
 import CommandManager
 
 # Unchangeable variables
+wheel_diameter = 7  # centimeters
 
 
 class Robot:
@@ -17,6 +19,11 @@ class Robot:
                                encoder_pins={"enc_a": rightDC_args["encoder_a"], "enc_b": rightDC_args["encoder_b"]},
                                pwm_pin=rightDC_args["pwm_pin"])
         self.frontServo = ServoMotor(servo_pin=servo_args["servo_pin"])
+
+        # How many centimeters to turn the wheels when turning around by 90 degrees
+        self.turn_distance = 10
+        # How much the front wheels should tilt when turning
+        self.turn_degrees = 45
 
         # Make new command queue for robot
         self.queue = CommandManager.CommandQueue()
@@ -47,7 +54,7 @@ class Robot:
             else:
                 await asyncio.sleep(1)
 
-    async def forward(self, centimeters):
+    async def drive(self, centimeters=100):
         # TODO maybe these functions should be async
         if not self.frontServo.is_centered():
             self.frontServo.center()
@@ -56,74 +63,39 @@ class Robot:
         while self.frontServo.is_running():
             await asyncio.sleep(0.2)
 
-        self.rightDC.forward(centimeters)
-        self.leftDC.forward(centimeters)
+        # Drive forwards or backwards depending on the distance
+        if centimeters > 0:
+            self.rightDC.forward(centimeters)
+            self.leftDC.forward(centimeters)
+        else:
+            self.rightDC.backward(centimeters)
+            self.leftDC.backward(centimeters)
 
         while self.isRunning():
             await asyncio.sleep(0.2)
 
-    async def backward(self, centimeters):
-        # TODO maybe these functions should be async
-        if not self.frontServo.is_centered():
-            self.frontServo.center()
-
-        # Wait for servo to center
-        while self.frontServo.is_running():
-            await asyncio.sleep(0.2)
-
-        self.rightDC.backward(centimeters)
-        self.leftDC.backward(centimeters)
-
-        while self.isRunning():
-            await asyncio.sleep(0.2)
-
-    async def turn_right(self, degrees):
-        self.frontServo.turn(degrees)
+    async def turn(self, degrees=90):
+        # Over 0 = right, else turn left
+        if degrees > 0:
+            self.frontServo.turn(self.turn_degrees)
+        else:
+            self.frontServo.turn(-self.turn_degrees)
 
         # Wait for servo to turn
         while self.frontServo.is_running():
             await asyncio.sleep(0.2)
 
-        # TODO: CALCULATE DISTANCE TO TURN
-        self.rightDC.forward(10)
-        self.leftDC.backward(10)
+        # TODO: CALCULATE DISTANCE TO TURN FOR AMOUNT OF DEGREES
+        # The distance that the wheels in the back travel to turn, is what we use together with degrees to variate the degrees at which we turn
+        if degrees > 0:
+            self.rightDC.forward(self.turn_distance)
+            self.leftDC.backward(self.turn_distance)
+        else:
+            self.rightDC.backward(self.turn_distance)
+            self.leftDC.forward(self.turn_distance)
 
         while self.isRunning():
             await asyncio.sleep(0.2)
-
-    async def turn_left(self, degrees):
-        self.frontServo.turn(-degrees)
-
-        # Wait for servo to turn
-        while self.frontServo.is_running():
-            await asyncio.sleep(0.2)
-
-        # TODO: CALCULATE DISTANCE TO TURN
-        self.rightDC.backward(10)
-        self.leftDC.forward(10)
-
-        while self.isRunning():
-            await asyncio.sleep(0.2)
-
-    def forward_nonasync(self, centimeters):
-        self.frontServo.center()
-        self.rightDC.forward(centimeters)
-        self.leftDC.forward(centimeters)
-
-    def backward_nonasync(self, centimeters):
-        self.frontServo.center()
-        self.rightDC.backward(centimeters)
-        self.leftDC.backward(centimeters)
-
-    def turn_right_nonasync(self, degrees):
-        self.frontServo.turn(degrees)
-        self.rightDC.forward(10)
-        self.leftDC.backward(10)
-
-    def turn_left_nonasync(self, degrees):
-        self.frontServo.turn(-degrees)
-        self.rightDC.backward(10)
-        self.leftDC.forward(10)
 
     def isRunning(self):
         return bool(self.leftDC.is_running() or self.rightDC.is_running() or self.frontServo.is_running())
@@ -132,16 +104,6 @@ class Robot:
         self.leftDC.stop()
         self.rightDC.stop()
         self.frontServo.stop()
-
-    def test_nonasync(self):
-        self.forward_nonasync(10)
-        sleep(5)
-        self.backward_nonasync(10)
-        sleep(5)
-        self.turn_right_nonasync(1)
-        sleep(5)
-        self.turn_left_nonasync(1)
-        sleep(5)
 
 
 class PIDController:
@@ -154,8 +116,6 @@ class PIDController:
 class Encoder:
     def __init__(self, pins):
         # Define pins
-        self.signals_per_rotation = 1350
-        self.signals_per_meter = self.signals_per_rotation*10  # needs more
         self.outputA = DigitalInputDevice(pins["enc_a"])
         self.outputB = DigitalInputDevice(pins["enc_b"])
 
@@ -164,6 +124,10 @@ class Encoder:
 
         # Variable to put current position in at start of tracking
         self.old_position = self.position
+
+        # Variables for signal distance
+        self.signals_per_rotation = 1350  # Measured by running a motor and stopping it at certain points, until it turned 360 degrees
+        self.signal_centimeter_ratio = ((wheel_diameter*math.pi)/self.signals_per_rotation)  # Get circumference of wheel, and get the ratio between signals from encoder and distance
 
         # Listen for changes
         self.outputB.when_activated = self._increment
@@ -180,9 +144,9 @@ class Encoder:
 
     def getDistance(self):
         position_change = self.getPositionChange()
-        meters_traveled = position_change/self.signals_per_meter
-        centimeters = meters_traveled*100
-        return {"cm": centimeters, "m": meters_traveled}
+        centimeters_traveled = position_change*self.signal_centimeter_ratio
+        meters_traveled = centimeters_traveled*100
+        return {"cm": centimeters_traveled, "m": meters_traveled}
 
 
 class DCMotor:
@@ -207,11 +171,11 @@ class DCMotor:
         thread.start()
 
     def wait_distance(self, distance):
-        while self.encoder.getPositionChange() <= self.encoder.signals_per_rotation:
+        # while self.encoder.getPositionChange() <= self.encoder.signals_per_rotation:
+        #     sleep(0.001)
+        # We wait until the distance travelled equals what we asked for
+        while self.encoder.getDistance()["cm"] < distance:
             sleep(0.001)
-        # TODO some function to check distance with encoder
-        # maybe this function should be async - since when we have to wait for encoder to give distance,
-        # everything else will be stopped while we wait for the motor to reach the set distance
         self.stop()
 
     def stop(self):

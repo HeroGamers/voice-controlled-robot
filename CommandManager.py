@@ -49,19 +49,19 @@ class Command:
             robot.running = True
             # Forward command
             if self.command == 1:
-                await robot.forward(self.number*self.distance)
+                await robot.drive(self.number*self.distance)
             # Backwards command
             elif self.command == -1:
-                await robot.backward(self.number*self.distance)
+                await robot.drive(-(self.number*self.distance))
             # Turn right command
             elif self.command == 2:
-                await robot.turn_right(90)
+                await robot.turn(90)
             # Turn left command
             elif self.command == 3:
-                await robot.turn_left(90)
+                await robot.turn(-90)
             # Turn 180 degrees command
             elif self.command == 4:
-                await robot.turn_right(180)
+                await robot.turn(180)
             else:
                 print("fuck?")
 
