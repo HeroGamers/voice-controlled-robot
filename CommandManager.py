@@ -3,7 +3,7 @@ import os
 import sys
 from logging.handlers import TimedRotatingFileHandler
 
-logger = command_logging.getLogger("commands")
+logger = command_logging.getLogger("CommandManager")
 
 
 def setup_logger():
@@ -35,7 +35,6 @@ class Command:
 
     # GPIO kode:
     async def run(self, robot):
-        print(self, robot)
         robot.current_command = self
 
         # Stop command
@@ -63,7 +62,7 @@ class Command:
             elif self.command == 4:
                 await robot.turn(180)
             else:
-                print("fuck?")
+                logger.error("fuck?")
 
             # Do something
 
@@ -166,4 +165,3 @@ class CommandParser:
                 self.commands.append(Command(command))
                 text_list.pop(i)
             i += 1
-

@@ -38,9 +38,6 @@ class TrackStream:
         self.buffer = []
         self.executor = ThreadPoolExecutor(max_workers=3)
 
-    def callback(self):
-        print("mmmh")
-
     def startWriting(self):
         self.loop = asyncio.get_event_loop()
         # with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
@@ -62,41 +59,36 @@ class TrackStream:
             frame = await self.track.recv()
 
             if type(frame) is not av.audio.frame.AudioFrame:
-                print("Not audio frame")
+                logger.error("Not audio frame")
                 return
 
             if not self.stream:
-                print("Audio stream frame information:")
-                print("--------------------")
-                print("Frame: " + str(frame))
-                print("Format: " + str(frame.format))
-                print("Layout name: " + str(frame.layout.name))
-                print("Layout channels: " + str(len(frame.layout.channels)))
-                print("Planes: " + str(frame.planes))
-                print("Bits: " + str(frame.format.bits))
-                print("Sample rate: " + str(frame.sample_rate))
-                print("Samples: " + str(frame.samples))
-                print("Original array size: " + str(len(frame.to_ndarray().reshape(1920, ))))
-                print("--------------------")
+                logger.debug("Audio stream frame information:")
+                logger.debug("--------------------")
+                logger.debug("Frame: " + str(frame))
+                logger.debug("Format: " + str(frame.format))
+                logger.debug("Layout name: " + str(frame.layout.name))
+                logger.debug("Layout channels: " + str(len(frame.layout.channels)))
+                logger.debug("Planes: " + str(frame.planes))
+                logger.debug("Bits: " + str(frame.format.bits))
+                logger.debug("Sample rate: " + str(frame.sample_rate))
+                logger.debug("Samples: " + str(frame.samples))
+                logger.debug("Original array size: " + str(len(frame.to_ndarray().reshape(1920, ))))
+                logger.debug("--------------------")
                 # if frame.sample_rate:
                 #     self.samp_rate = frame.sample_rate
                 # self.channels = len(frame.layout.channels)
 
-                if self.use_blocking:
-                    self.stream = p.open(rate=self.samp_rate*self.channels, format=self.format, channels=self.channels,
-                                         output=True, input=True, frames_per_buffer=int(self.chunk_size*self.channels))
-                else:
-                    self.stream = p.open(rate=self.samp_rate, format=self.format, channels=self.channels,
-                                         output=True, frames_per_buffer=self.chunk_size,
-                                         stream_callback=self.callback)
+                self.stream = p.open(rate=self.samp_rate*self.channels, format=self.format, channels=self.channels,
+                                     output=True, input=True, frames_per_buffer=int(self.chunk_size*self.channels))
 
-                print("Stream information:")
-                print("--------------------")
-                print("Format: " + str(int(self.format*2)))
-                print("Channels: " + str(self.channels))
-                print("Sample rate: " + str(self.samp_rate*self.channels) + " ("+str(self.samp_rate)+")")
-                print("Cache size: " + str(int(self.chunk_size*self.channels)))
-                print("--------------------")
+                logger.debug("Stream information:")
+                logger.debug("--------------------")
+                logger.debug("Format: " + str(int(self.format*2)))
+                logger.debug("Channels: " + str(self.channels))
+                logger.debug("Sample rate: " + str(self.samp_rate*self.channels) + " ("+str(self.samp_rate)+")")
+                logger.debug("Cache size: " + str(int(self.chunk_size*self.channels)))
+                logger.debug("--------------------")
 
             # self.writeToBuffer(frame)
             await self.loop.run_in_executor(self.executor, self.writeToBuffer, frame)
@@ -127,22 +119,17 @@ class TrackStream:
             if re_sampled is not None:
                 frame_arr = re_sampled.astype(dtype='int16')
 
-        # print(len(data))
-        # print(len(frame_arr))
-        # print(data)
-        # print(frame_arr)
-
         # Add to buffer
         self.buffer = self.buffer + frame_arr.tolist()
 
-        # print("Frame " + str(i) + ":")
-        # print("--------------------")
-        # print("Time: " + str(frame.time))
-        # print("Array: " + str(frame_arr))
-        # # print(frame_arr.tobytes())
-        # # print(len(frame_arr))
-        # print("Current buffer size: " + str(len(self.buffer)))
-        # print("--------------------")
+        # logger.debug("Frame " + str(i) + ":")
+        # logger.debug("--------------------")
+        # logger.debug("Time: " + str(frame.time))
+        # logger.debug("Array: " + str(frame_arr))
+        # # logger.debug(frame_arr.tobytes())
+        # # logger.debug(len(frame_arr))
+        # logger.debug("Current buffer size: " + str(len(self.buffer)))
+        # logger.debug("--------------------")
 
     async def writeToStream(self):
         logger.info("Running audio track frames...")
@@ -163,9 +150,7 @@ class TrackStream:
                         # print("More than buffer size")
                         toWrite = np.array(self.buffer[:to_write])
                         self.buffer = self.buffer[to_write:]
-                        # print("--writing--")
                         self.loop.run_in_executor(self.executor, self.stream.write, toWrite.tobytes())
-                        # self.stream.write(toWrite.tobytes())
             except Exception as e:
                 logger.error(str(e))
                 return
@@ -186,7 +171,7 @@ class MicInput(Microphone):
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
-        print("STOPPING STREAM!!!!")
+        print("STOPPING STREAM!")
         # try:
         #     self.stream.close()
         # finally:
@@ -816,8 +801,7 @@ class DanSpeecher():
         try:
             return next(self.generator)
         except Exception as e:
-            logger.error("aaaaaa - " + str(e))
-        # return await(self.generator.__anext__())
+            logger.error("error getting transcription - " + str(e))
 
     def startTranscriber(self, emitter: EventEmitter):
         self.transcribing = True
@@ -826,7 +810,6 @@ class DanSpeecher():
                 logger.debug("breaking")
                 break
             transcription = self.get_transcription()
-            # print("got Transcription: " + str(transcription))
             logger.info("Transcription: " + str(transcription))
             if transcription:
                 emitter.emit("command", transcription)

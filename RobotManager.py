@@ -1,11 +1,12 @@
 import asyncio
+import logging
 import math
 import threading
 from time import sleep
-
 from gpiozero import Motor, Servo, DigitalInputDevice
 import CommandManager
 
+logger = logging.getLogger("RobotManager")
 # Unchangeable variables
 wheel_diameter = 7  # centimeters
 
@@ -47,7 +48,7 @@ class Robot:
                 if self.queue.queue:
                     next_command: CommandManager.Command = self.queue.queue[0]
                     self.queue.queue.pop(0)
-                    print("Running command: " + str(next_command.command))
+                    logger.debug("Running command: " + str(next_command.command))
                     await next_command.run(self)
                 else:
                     await asyncio.sleep(1)

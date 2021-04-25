@@ -27,6 +27,9 @@ if (debug && debug === "true") {
     document.getElementById('debug').style.display = 'block';
 }
 
+// WebRTC code - a lot of it is taken from https://github.com/aiortc/aiortc/blob/main/examples/server/client.js
+// Modified for own needs
+
 // peer connection
 var pc = null;
 

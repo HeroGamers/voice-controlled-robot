@@ -15,7 +15,7 @@ import SpeechManager
 
 ROOT = os.path.dirname(__file__)
 
-logger = logging.getLogger("pc")
+logger = logging.getLogger("PeerConnection")
 pcs = set()
 players = []
 relay = MediaRelay()
@@ -62,7 +62,7 @@ def getLocalMedia(params):
         )
     elif platform.system() == "Windows":
         dev_names = get_device_list_dshow()
-        print("Cameras: ", dev_names)
+        logger.debug("Cameras: " + str(dev_names))
         video = MediaPlayer("video={}".format(dev_names[camera_num]), format='dshow', options=options)
     else:
         video = MediaPlayer('/dev/video{}'.format(camera_num), format="v4l2", options=options)
@@ -82,8 +82,8 @@ def getLocalMedia(params):
 def addMediaTracks(pc, params):
     global audio, video, players
 
-    # if not players:
-    #     audio, video = getLocalMedia(params)
+    if not players:
+        audio, video = getLocalMedia(params)
 
     for t in pc.getTransceivers():
         if t.kind == "audio" and audio:
@@ -152,7 +152,7 @@ async def offer(request):
 
                 # loop = asyncio.new_event_loop()
                 # asyncio.set_event_loop(loop)
-            print("trackstream")
+            logger.debug("trackstream")
             trackStream = SpeechManager.TrackStream(track)
             await trackStream.intializeStream()
             # Run on another thread - so we can continue
@@ -164,7 +164,7 @@ async def offer(request):
                 # executor.submit(sendAudio, client_audio, stream)
 
             await asyncio.sleep(1)
-            print("micsetup")
+            logger.debug("micsetup")
             mic = SpeechManager.MicInput(sampling_rate=trackStream.samp_rate, pyaudio_stream=trackStream.stream)
 
             def doDanSpeecher():
@@ -174,15 +174,15 @@ async def offer(request):
                 # danSpeecher.startTranscriber(RTCMessage)
 
                 t1 = threading.Thread(target=danSpeecher.adjust, daemon=True)
-                print("running adjuster task")
+                logger.debug("running adjuster task")
                 t1.start()
                 t1.join()
                 t2 = threading.Thread(target=danSpeecher.createGenerator, daemon=True)
-                print("running generator task")
+                logger.debug("running generator task")
                 t2.start()
                 t2.join()
                 t3 = threading.Thread(target=danSpeecher.startTranscriber, args=(RTCMessage,), daemon=True)
-                print("running transcriber task")
+                logger.debug("running transcriber task")
                 t3.start()
 
             with ThreadPoolExecutor(max_workers=1) as executor:
@@ -217,7 +217,7 @@ async def offer(request):
                     if not danspeecher:
                         await speechRecognizion(client_audio)
                 else:
-                    print("On board speech recognition is disabled.")
+                    logger.info("On board speech recognition is disabled.")
 
     @pc.on("iceconnectionstatechange")
     async def on_iceconnectionstatechange():
