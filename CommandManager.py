@@ -93,8 +93,8 @@ class CommandParser:
                             "tilbage": -1, "baglæns": -1, "bagud": -1,
                             "højre": 2,
                             "venstre": 3}
-        distance_keywords = {"millimeter": 0.001, "centimeter": 0.01,
-                             "meter": 1}
+        distance_keywords = {"millimeter": 0.1, "centimeter": 1,
+                             "meter": 100}
         number_keywords = {"en": 1, "1": 1,
                            "to": 2, "2": 2,
                            "tre": 3, "3": 3}
