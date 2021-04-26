@@ -97,7 +97,24 @@ class CommandParser:
                              "meter": 100}
         number_keywords = {"en": 1, "1": 1,
                            "to": 2, "2": 2,
-                           "tre": 3, "3": 3}
+                           "tre": 3, "3": 3,
+                           "fire": 4, 
+                           "fem": 5,
+                           "seks": 6,
+                           "syv": 7,
+                           "otte": 8,
+                           "ni": 9,
+                           "ti": 10,
+                           "elleve": 11,
+                           "tolv": 12,
+                           "tretten": 13,
+                           "fjorten": 14,
+                           "femten": 15,
+                           "seksten": 16,
+                           "sytten": 17,
+                           "atten": 18,
+                           "nitten": 19,
+                           "tyve": 20}
 
         text_list = self.raw_text.split(" ")
 
