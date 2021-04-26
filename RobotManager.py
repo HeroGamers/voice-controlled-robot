@@ -69,8 +69,9 @@ class Robot:
             self.rightDC.forward(centimeters)
             self.leftDC.forward(centimeters)
         else:
-            self.rightDC.backward(centimeters)
-            self.leftDC.backward(centimeters)
+            # It's already minus, so minus it again and get plus
+            self.rightDC.backward(-centimeters)
+            self.leftDC.backward(-centimeters)
 
         while self.isRunning():
             await asyncio.sleep(0.2)
