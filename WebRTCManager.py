@@ -56,17 +56,25 @@ def getLocalMedia(params):
     camera_num = 0
     options = {"framerate": params["video_fps"], "video_size": params["video_res"], "rtbufsize": params["video_buffer"]}
 
-    if platform.system() == "Darwin":
-        video = MediaPlayer(
-            "default:none", format="avfoundation", options=options
-        )
-    elif platform.system() == "Windows":
-        dev_names = get_device_list_dshow()
-        logger.debug("Cameras: " + str(dev_names))
-        video = MediaPlayer("video={}".format(dev_names[camera_num]), format='dshow', options=options)
-    else:
-        video = MediaPlayer('/dev/video{}'.format(camera_num), format="v4l2", options=options)
-    players.append(video)
+    try:
+        if platform.system() == "Darwin":
+            video = MediaPlayer(
+                "default:none", format="avfoundation", options=options
+            )
+        elif platform.system() == "Windows":
+            dev_names = get_device_list_dshow()
+            logger.debug("Cameras: " + str(dev_names))
+            video = MediaPlayer("video={}".format(dev_names[camera_num]), format='dshow', options=options)
+
+        else:
+            video = MediaPlayer('/dev/video{}'.format(camera_num), format="v4l2", options=options)
+    except Exception as e:
+        logger.error(str(e))
+    
+    relay_sub = None
+    if video:
+        players.append(video)
+        relay_sub = relay.subscribe(video.video)
 
     # if not audio:
     #     test_audio = random.randint(0, 1)
@@ -76,7 +84,7 @@ def getLocalMedia(params):
     #         audio = MediaPlayer(os.path.join(ROOT, "public/Raining Tacos - Parry Gripp & BooneBum.mp3"))
     # players.append(audio)
 
-    return audio, relay.subscribe(video.video)
+    return audio, relay_sub
 
 
 def addMediaTracks(pc, params):
