@@ -42,16 +42,12 @@ class Robot:
     async def run(self):
         # Main loop for checking for commands and running them
         while True:
-            # If robot is running
-            if self.running:
-                # If any commands in queue
-                if self.queue.queue:
-                    next_command: CommandManager.Command = self.queue.queue[0]
-                    self.queue.queue.pop(0)
-                    logger.debug("Running command: " + str(next_command.command))
-                    await next_command.run(self)
-                else:
-                    await asyncio.sleep(1)
+            # If any commands in queue
+            if self.queue.queue:
+                next_command: CommandManager.Command = self.queue.queue[0]
+                self.queue.queue.pop(0)
+                logger.debug("Running command: " + str(next_command.command))
+                await next_command.run(self)
             else:
                 await asyncio.sleep(1)
 
