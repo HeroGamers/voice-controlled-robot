@@ -24,7 +24,7 @@ class Robot:
         # How many centimeters to turn the wheels when turning around by 90 degrees
         self.turn_distance = 10
         # How much the front wheels should tilt when turning
-        self.turn_degrees = 45
+        self.turn_degrees = 25
 
         # Make new command queue for robot
         self.queue = CommandManager.CommandQueue()
@@ -75,9 +75,9 @@ class Robot:
     async def turn(self, degrees=90):
         # Over 0 = right, else turn left
         if degrees > 0:
-            self.frontServo.turn(self.turn_degrees)
-        else:
             self.frontServo.turn(-self.turn_degrees)
+        else:
+            self.frontServo.turn(self.turn_degrees)
 
         # Wait for servo to turn
         while self.frontServo.is_running():

@@ -98,7 +98,7 @@ class CommandParser:
         number_keywords = {"en": 1, "1": 1,
                            "to": 2, "2": 2,
                            "tre": 3, "3": 3,
-                           "fire": 4, 
+                           "fire": 4,
                            "fem": 5,
                            "seks": 6,
                            "syv": 7,
