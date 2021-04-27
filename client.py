@@ -28,7 +28,7 @@ transcriber.start()
 
 input("Press Enter to open webbrowser.")
 driver = webdriver.Chrome()  # Optional argument, if not specified will search path.
-driver.get('http://localhost')
+driver.get('http://192.168.0.100')
 
 time.sleep(5)
 
