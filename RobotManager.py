@@ -22,7 +22,7 @@ class Robot:
         self.frontServo = ServoMotor(servo_pin=servo_args["servo_pin"])
 
         # How many centimeters to turn the wheels when turning around by 90 degrees
-        self.turn_distance = 10
+        self.turn_distance = 25
         # How much the front wheels should tilt when turning
         self.turn_degrees = 25
 
@@ -86,11 +86,11 @@ class Robot:
         # TODO: CALCULATE DISTANCE TO TURN FOR AMOUNT OF DEGREES
         # The distance that the wheels in the back travel to turn, is what we use together with degrees to variate the degrees at which we turn
         if degrees > 0:
-            self.rightDC.forward(self.turn_distance)
-            self.leftDC.backward(self.turn_distance)
-        else:
             self.rightDC.backward(self.turn_distance)
             self.leftDC.forward(self.turn_distance)
+        else:
+            self.rightDC.forward(self.turn_distance)
+            self.leftDC.backward(self.turn_distance)
 
         while self.isRunning():
             await asyncio.sleep(0.2)
